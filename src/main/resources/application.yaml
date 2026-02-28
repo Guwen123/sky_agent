@@ -34,7 +34,7 @@ spring:
 #      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 mybatis-plus:
-  type-aliases-package: com.hmdp.entity # 别名扫描包
+  type-aliases-package: com.agent.entity # 别名扫描包
 logging:
   level:
-    com.hmdp: debug
+    com.agent: debug

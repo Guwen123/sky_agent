@@ -1,16 +1,25 @@
 package com.agent.interceptor;
 
 import com.agent.entity.Result;
+import com.agent.entity.User;
+import com.agent.mapper.UserMapper;
 import com.agent.utils.JwtUtil;
+import com.agent.utils.UserHolder;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Claims;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.PrintWriter;
 
 public class JwtInterceptor implements HandlerInterceptor {
+
+    @Resource
+    private UserMapper userMapper;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
@@ -34,8 +43,18 @@ public class JwtInterceptor implements HandlerInterceptor {
         }
 
         try {
-            // 验证token
-            JwtUtil.parseToken(token);
+            // 验证token并解析
+            Claims claims = JwtUtil.parseToken(token);
+            String username = claims.getSubject();
+
+            // 从数据库查询用户信息
+            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("username", username);
+            User user = userMapper.selectOne(queryWrapper);
+
+            // 将用户信息保存到ThreadLocal
+            UserHolder.setUser(user);
+
             return true;
         } catch (Exception e) {
             // token无效，返回401
@@ -57,6 +76,7 @@ public class JwtInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
             throws Exception {
-        // 空实现
+        // 请求完成后清除ThreadLocal中的用户信息，防止内存泄漏
+        UserHolder.removeUser();
     }
 }
