@@ -2,7 +2,7 @@ server:
   port: 8072
 spring:
   application:
-    name: hmdp
+    name: sky_agent
   datasource:
     driver-class-name: com.mysql.jdbc.Driver
     url: jdbc:mysql://127.0.0.1:3306/sky_agent?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
