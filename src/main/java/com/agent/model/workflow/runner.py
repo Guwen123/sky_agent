@@ -9,9 +9,8 @@ class WorkflowRunner:
         graph = GraphBuilder.build_graph()
         self.app = graph.compile()
     
-    def run(self, initial_state: dict) -> dict:
+    def run(self, initial_state: AgentState) -> dict:
         """运行工作流
-        
         Args:
             initial_state: 初始状态
             

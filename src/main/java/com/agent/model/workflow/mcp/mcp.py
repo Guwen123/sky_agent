@@ -1,15 +1,19 @@
+import inspect
 from langgraph.prebuilt import ToolNode
 from langchain_core.tools import tool
+from langchain_core.messages import SystemMessage
 from com.agent.model.workflow.rag.vector import Vector
 from com.agent.model.workflow.prompt.systemPrompt import SYSTEM_PROMPT
+from com.agent.model.workflow.llm.llm_factory import LLMFactory
+from com.agent.model.state.state import AgentState
+
 
 class MCP:
     def __init__(self):
-        self.tools = self._auto_discover_tools()
-        self.vector = Vector()
+        self.tools = [self.addDocuments, self.queryRag]
         self.llm_with_tools = LLMFactory.create_openai_llm().bind_tools(self.tools)
 
-    def _auto_discover_tools(self) -> List[BaseTool]:
+    def _auto_discover_tools(self) -> list:
         tools = []
         for name, member in inspect.getmembers(self, predicate=inspect.ismethod):
             if hasattr(member, '_langchain_tool'):
@@ -20,21 +24,25 @@ class MCP:
     def get_tools(self):
         return self.tools
         
-    @tool(name="queryRag", description="查询rag数据库，返回查询结果") 
-    def queryRag(state: AgentState) -> AgentState:
-        question = state["messages"][-1]["content"]
-        result = self.vector.query(question)
-        state["messages"].append({"role": "assistant", "content": f"RAG查询结果：{result}"})
-        return state
-
-    @tool(name="addDocuments", description="添加文档到rag数据库")
-    def addDocuments(state: AgentState) -> AgentState:
-        file_path = state["messages"][-1]["content"]
-        self.vector.add_documents(file_path)
-        state["messages"].append({"role": "assistant", "content": "文档添加成功"})
-        return state
+    @tool(description="查询rag数据库，返回查询结果") 
+    def queryRag( question: str) -> str:
+        """查询rag数据库，返回查询结果"""
+        vector = Vector()
+        result = vector.query(question)
+        return f"RAG查询结果：{result}"
     
-    def handleLlm(state: AgentState) -> AgentState:
+    @tool(description="添加文档到rag数据库")
+    def addDocuments( file_path: str) :
+        """添加文档到rag数据库"""  
+        vector = Vector()
+        vector.add_documents(file_path)
+        print("="*20)
+        print(f"文件路径：{file_path}")
+        print("="*20)
+        print(f"文档添加成功")
+        print("="*20)
+    
+    def handleLlm(self, state: AgentState) -> AgentState:
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]
         response = self.llm_with_tools.invoke(messages)
         state["messages"].append( response )

@@ -6,7 +6,9 @@ class Md5Vality:
         self.md5_obj = md5()
         self.md5_path = "./rag/md5.txt"
         if not os.path.exists(self.md5_path):
-            os.makedirs(self.md5_path)
+            os.makedirs(os.path.dirname(self.md5_path), exist_ok=True)
+            with open(self.md5_path, 'w') as f:
+                pass
 
     def md5Vality(self, text: str) -> str:
         result =  self.getMd5(text)
@@ -17,7 +19,7 @@ class Md5Vality:
             return False
         with open(self.md5_path, "a") as f:
             f.write(result + "\n")
-        rint("数据能够添加到rag中")
+        print("数据能够添加到rag中")
         return True
 
     def getMd5(self, text: str) -> str:

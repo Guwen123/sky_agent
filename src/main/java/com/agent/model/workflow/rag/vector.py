@@ -1,5 +1,5 @@
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_chroma import Chroma
+from langchain_openai import OpenAIEmbeddings
 from com.agent.model.contants.contant import MODEL_API, BASE_API, MODEL_EMBEDDING_NAME, QUERY_NUMBER
 from com.agent.model.workflow.mcp.tools.md5Vality import Md5Vality
 from com.agent.model.workflow.mcp.tools.documentHanlde import DocumentHanlde

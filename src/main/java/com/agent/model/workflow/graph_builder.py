@@ -1,12 +1,11 @@
 from langgraph.graph import StateGraph, END, START
 from com.agent.model.state.state import AgentState
 from com.agent.model.workflow.mcp.mcp import MCP
-from com.agent.model.workflow.prompt.system import SYSTEM_PROMPT
 from langgraph.prebuilt import ToolNode
 
 class GraphBuilder:
     """工作流图构建器，负责创建 LangGraph 工作流"""
-    
+
     @staticmethod
     def build_graph() -> StateGraph:
         """构建工作流图
@@ -29,8 +28,7 @@ class GraphBuilder:
         graph.set_entry_point("handleLlm")
         graph.add_conditional_edges(
             "handleLlm",
-            lambda state: "tools" if "tool_calls" in state["messages"][-1]
-                    and state["messages"][-1].tool_calls else "end",
+            lambda state: "tools" if state["messages"][-1].tool_calls else "end",
             {
                 "tools": "tool_node",
                 "end": END
