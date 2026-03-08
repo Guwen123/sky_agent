@@ -23,9 +23,11 @@ class GraphBuilder:
         # 添加节点
         graph.add_node("tool_node", tool_node)
         graph.add_node("handleLlm", mcp.handleLlm)
+        graph.add_node("compressMessages", mcp.compressMessages)
 
         # 设置条件边
-        graph.set_entry_point("handleLlm")
+        graph.set_entry_point("compressMessages")
+        graph.add_edge("compressMessages", "handleLlm")
         graph.add_conditional_edges(
             "handleLlm",
             lambda state: "tools" if state["messages"][-1].tool_calls else "end",

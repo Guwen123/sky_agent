@@ -6,6 +6,7 @@ from com.agent.model.workflow.rag.vector import Vector
 from com.agent.model.workflow.prompt.systemPrompt import SYSTEM_PROMPT
 from com.agent.model.workflow.llm.llm_factory import LLMFactory
 from com.agent.model.state.state import AgentState
+from com.agent.model.workflow.mcp.tools.compressionHandle import CompressionHandle
 
 
 class MCP:
@@ -41,6 +42,11 @@ class MCP:
         print("="*20)
         print(f"文档添加成功")
         print("="*20)
+
+    def compressMessages( self, state: AgentState) -> list:
+        compressionHandle = CompressionHandle()
+        state["messages"] = compressionHandle.compressMessages(state["messages"])
+        return state["messages"]
     
     def handleLlm(self, state: AgentState) -> AgentState:
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]

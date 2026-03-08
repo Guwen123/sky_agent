@@ -3,7 +3,6 @@ import os
 
 class Md5Vality:
     def __init__(self):
-        self.md5_obj = md5()
         self.md5_path = "./rag/md5.txt"
         if not os.path.exists(self.md5_path):
             os.makedirs(os.path.dirname(self.md5_path), exist_ok=True)
@@ -23,5 +22,6 @@ class Md5Vality:
         return True
 
     def getMd5(self, text: str) -> str:
-        self.md5_obj.update(text.encode('utf-8'))
-        return self.md5_obj.hexdigest()
+        md5_obj = md5()
+        md5_obj.update(text.encode('utf-8'))
+        return md5_obj.hexdigest()
