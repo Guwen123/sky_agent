@@ -2,6 +2,7 @@ from com.agent.model.workflow.graph_builder import GraphBuilder
 from com.agent.model.state.state import AgentState
 from langgraph.checkpoint.sqlite import SqliteSaver
 import os
+import sqlite3
 
 class WorkflowRunner:
     """工作流运行器，负责执行 LangGraph 工作流"""
@@ -11,8 +12,10 @@ class WorkflowRunner:
         os.makedirs("./data", exist_ok=True)
         # 2. 初始化 LangGraph（原生 Checkpoint）
         print("[初始化] 正在加载 LangGraph...")
-        sqlite_checkpointer = SqliteSaver.from_conn_string("./data/native_memory.db")
-        # 构建并编译图
+
+        db_path = "./data/native_memory.db"
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        sqlite_checkpointer = SqliteSaver(conn)
         graph = GraphBuilder.build_graph()
         self.app = graph.compile(checkpointer=sqlite_checkpointer)
     

@@ -5,7 +5,7 @@ from com.agent.model.workflow.prompt.compressionPrompt import COMPRESSION_PROMPT
 
 class CompressionHandle:
 
-    def compressMessages(messages: List[dict]) -> List[dict]:
+    def compressMessages(self, messages: List[dict]) -> List[dict]:
         if len(messages) <= MAX_MESSAGES:
             return messages
 

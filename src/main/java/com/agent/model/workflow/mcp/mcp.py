@@ -43,10 +43,10 @@ class MCP:
         print(f"文档添加成功")
         print("="*20)
 
-    def compressMessages( self, state: AgentState) -> list:
+    def compressMessages( self, state: AgentState) -> AgentState:
         compressionHandle = CompressionHandle()
         state["messages"] = compressionHandle.compressMessages(state["messages"])
-        return state["messages"]
+        return state
     
     def handleLlm(self, state: AgentState) -> AgentState:
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]
