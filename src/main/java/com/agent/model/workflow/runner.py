@@ -31,6 +31,5 @@ class WorkflowRunner:
         
         final_state = self.app.invoke(initial_state, config=config)
         ai_response = final_state["messages"][-1].content
-        sqlite_checkpointer.put(initial_state["user_id"], final_state)
 
         return ai_response

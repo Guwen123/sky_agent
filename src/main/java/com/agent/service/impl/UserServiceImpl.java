@@ -7,13 +7,17 @@ import com.agent.service.UserService;
 import org.springframework.stereotype.Service;
 
 import com.agent.utils.UserHolder;
+import java.time.LocalDateTime;
 
 import javax.annotation.Resource;
+import com.agent.utils.ApiCilent;
 
 @Service
 public class UserServiceImpl implements UserService {
     @Resource
     private UserMapper userMapper;
+    @Resource
+    private ApiCilent apiCilent;
 
     @Override
     public Result detail() {
@@ -36,12 +40,16 @@ public class UserServiceImpl implements UserService {
     public Result talk(String question) {
         // 从ThreadLocal获取当前登录用户
         User user = UserHolder.getUser();
-        if (user == null) {
-            return Result.error("用户未登录");
-        }
+        String response = null;
+        // 更新最后一次活跃时间
+        LocalDateTime now = LocalDateTime.now();
+        userMapper.updateById(User.builder()
+                .id(user.getId())
+                .updateTime(now)
+                .build());
         // 调用Agent服务
-        new Thread(() -> {
-        }).start();
-        return Result.ok("消息发送成功");
+        response = apiCilent.post(question, user.getId().toString());
+
+        return Result.ok(response);
     }
 }

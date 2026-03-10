@@ -38,3 +38,6 @@ mybatis-plus:
 logging:
   level:
     com.agent: debug
+
+RequestApi:
+  url: http://localhost:8000/
