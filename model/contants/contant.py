@@ -1,5 +1,5 @@
 # Model constants
-MODEL_API = "sk-mdvlkugikryjgnyekngnbgyqlypyjjckfzadtvnfefecxjix"
+MODEL_API = ""
 MODEL_NAME = "Qwen/Qwen3-8B"
 BASE_API = "https://api.siliconflow.cn/v1"
 
