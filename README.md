@@ -270,13 +270,6 @@ npm run dev
 - Python Agent 通过 `Text2SQL` 直连 MySQL 做店铺信息补全
 - GraphRAG 结合 Neo4j 与 Chroma 提供推荐和问答能力
 
-## 发布到 GitHub 前的建议
-
-- 替换 `application.yaml` 与 `contant.py` 中的账号、密码、API Key
-- 检查是否误提交 `data/`、`rag_db/`、`ui/node_modules/` 等本地生成目录
-- 补充项目截图、系统架构图、对话效果图
-- 如果要公开仓库，建议增加 `LICENSE`
-
 ## 后续可继续优化的方向
 
 - 将配置改造成 `.env` 或配置中心，避免明文敏感信息出现在仓库
