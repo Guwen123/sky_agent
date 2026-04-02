@@ -31,3 +31,28 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Python ###
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+### Node ###
+ui/node_modules/
+ui/dist/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+### Local runtime data ###
+data/
+rag_db/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+### OS ###
+.DS_Store

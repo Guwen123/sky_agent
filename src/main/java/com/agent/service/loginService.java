@@ -7,7 +7,9 @@ import com.agent.entity.loginData;
 public interface loginService {
     Result login(loginData user);
 
-    Result getCaptcha(String username);
+    Result getLoginCaptcha(String username);
 
-    Result register(User user);
+    Result getRegisterCaptcha(String username);
+
+    Result register(loginData user);
 }

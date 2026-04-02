@@ -25,13 +25,24 @@ public class LoginController {
         return loginService.login(user);
     }
 
+    @GetMapping("/captcha/login")
+    public Result getLoginCaptcha(@RequestParam String username) {
+        return loginService.getLoginCaptcha(username);
+    }
+
+    @GetMapping("/captcha/register")
+    public Result getRegisterCaptcha(@RequestParam String username) {
+        return loginService.getRegisterCaptcha(username);
+    }
+
+    // 兼容旧前端调用，默认走登录验证码
     @GetMapping("/captcha")
     public Result getCaptcha(@RequestParam String username) {
-        return loginService.getCaptcha(username);
+        return loginService.getLoginCaptcha(username);
     }
 
     @PostMapping("/register")
-    public Result register(@RequestBody User user) {
+    public Result register(@RequestBody loginData user) {
         return loginService.register(user);
     }
 }

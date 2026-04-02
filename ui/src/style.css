@@ -1,0 +1,46 @@
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap");
+
+:root {
+  --font-display: "Orbitron", "Trebuchet MS", "Microsoft YaHei", sans-serif;
+  --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --ink-deep: #173653;
+  --bg-cream: #fff8f3;
+  --bg-sky: #dff9ff;
+  --bg-mist: #f4fbff;
+  --scene-backdrop: url("/scene-backdrop.png");
+  font-family: var(--font-body);
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+body {
+  margin: 0;
+  color: var(--ink-deep);
+  background:
+    radial-gradient(circle at 15% 18%, rgba(124, 232, 255, 0.85), transparent 28%),
+    radial-gradient(circle at 84% 16%, rgba(255, 188, 151, 0.72), transparent 26%),
+    radial-gradient(circle at 84% 82%, rgba(129, 238, 208, 0.52), transparent 22%),
+    linear-gradient(135deg, var(--bg-cream) 0%, var(--bg-sky) 42%, var(--bg-mist) 100%);
+  background-attachment: fixed;
+}
+
+button,
+input {
+  font: inherit;
+}

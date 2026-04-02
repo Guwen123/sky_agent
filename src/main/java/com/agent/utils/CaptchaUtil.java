@@ -1,4 +1,4 @@
-package com.agent.utils;
+﻿package com.agent.utils;
 
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -10,29 +10,56 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class CaptchaUtil {
 
+    private static final String LOGIN_SCENE = "login";
+    private static final String REGISTER_SCENE = "register";
+
     @Resource
     private RedisTemplate<String, String> redisTemplate;
 
-    // 生成6位数字验证码
-    public String generateCaptcha(String username) {
+    public String generateLoginCaptcha(String username) {
+        return generateCaptcha(username, LOGIN_SCENE);
+    }
+
+    public String generateRegisterCaptcha(String username) {
+        return generateCaptcha(username, REGISTER_SCENE);
+    }
+
+    public boolean validateLoginCaptcha(String username, String captcha) {
+        return validateCaptcha(username, captcha, LOGIN_SCENE);
+    }
+
+    public boolean validateRegisterCaptcha(String username, String captcha) {
+        return validateCaptcha(username, captcha, REGISTER_SCENE);
+    }
+
+    public void removeLoginCaptcha(String username) {
+        removeCaptcha(username, LOGIN_SCENE);
+    }
+
+    public void removeRegisterCaptcha(String username) {
+        removeCaptcha(username, REGISTER_SCENE);
+    }
+
+    private String generateCaptcha(String username, String scene) {
         Random random = new Random();
         StringBuilder captcha = new StringBuilder();
         for (int i = 0; i < 6; i++) {
             captcha.append(random.nextInt(10));
         }
-        // 将验证码存储到Redis，有效期5分钟
-        redisTemplate.opsForValue().set("captcha:" + username, captcha.toString(), 5, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(buildKey(username, scene), captcha.toString(), 5, TimeUnit.MINUTES);
         return captcha.toString();
     }
 
-    // 验证验证码
-    public boolean validateCaptcha(String username, String captcha) {
-        String storedCaptcha = redisTemplate.opsForValue().get("captcha:" + username);
+    private boolean validateCaptcha(String username, String captcha, String scene) {
+        String storedCaptcha = redisTemplate.opsForValue().get(buildKey(username, scene));
         return captcha != null && captcha.equals(storedCaptcha);
     }
 
-    // 删除验证码
-    public void removeCaptcha(String username) {
-        redisTemplate.delete("captcha:" + username);
+    private void removeCaptcha(String username, String scene) {
+        redisTemplate.delete(buildKey(username, scene));
+    }
+
+    private String buildKey(String username, String scene) {
+        return "captcha:" + scene + ":" + username;
     }
 }

@@ -1,5 +1,6 @@
 server:
   port: 8072
+
 spring:
   application:
     name: sky_agent
@@ -18,26 +19,23 @@ spring:
         min-idle: 1
         time-between-eviction-runs: 10s
   jackson:
-    default-property-inclusion: non_null # JSON处理时忽略非空字段
-  # Kafka配置
-#  kafka:
-#    bootstrap-servers: localhost:9092
-#    consumer:
-#      group-id: voucher-order-group
-#      auto-offset-reset: earliest
-#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-#      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-#      properties:
-#        spring.json.trusted.packages: "com.hmdp.entity"
-#    producer:
-#      key-serializer:  org.apache.kafka.common.serialization.StringSerializer
-#      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    default-property-inclusion: non_null
+  mvc:
+    async:
+      request-timeout: 300000
 
 mybatis-plus:
-  type-aliases-package: com.agent.entity # 别名扫描包
+  type-aliases-package: com.agent.entity
+
 logging:
   level:
     com.agent: debug
 
 RequestApi:
   url: http://localhost:8000/
+
+external:
+  hmdp:
+    base-url: http://localhost:8081
+  sky-take-out:
+    base-url: http://localhost:8086

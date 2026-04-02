@@ -1,4 +1,4 @@
-package com.agent.service.impl;
+﻿package com.agent.service.impl;
 
 import com.agent.entity.Result;
 import com.agent.entity.User;
@@ -9,14 +9,19 @@ import com.agent.utils.CaptchaUtil;
 import com.agent.utils.JwtUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.stereotype.Service;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 import javax.annotation.Resource;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class loginServiceImpl implements loginService {
 
     @Resource
@@ -31,71 +36,86 @@ public class loginServiceImpl implements loginService {
         String password = user.getPassword();
         String captcha = user.getCaptcha();
 
-        // 验证验证码
-        if (!captchaUtil.validateCaptcha(username, captcha)) {
+        if (!captchaUtil.validateLoginCaptcha(username, captcha)) {
             return Result.error(400, "验证码错误或已过期");
         }
 
-        // 从数据库根据用户名查找用户
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("username", username);
         User dbUser = userMapper.selectOne(queryWrapper);
 
-        // 检查用户是否存在
         if (dbUser == null) {
             return Result.error(401, "用户名不存在");
         }
 
-        // 检查密码是否正确
-        if (!dbUser.getPassword().equals(password)) {
+        String encryptedInput;
+        try {
+            encryptedInput = md5Hex(password);
+        } catch (NoSuchAlgorithmException e) {
+            return Result.error(500, "MD5算法不可用");
+        }
+
+        if (!encryptedInput.equals(dbUser.getPassword())) {
             return Result.error(401, "密码错误");
         }
 
-        // 检查用户状态
         if (dbUser.getStatus() == 0) {
             return Result.error(403, "账号已被禁用");
         }
 
-        // 登录成功，生成JWT token
         Map<String, Object> claims = new HashMap<>();
         claims.put("username", username);
         claims.put("userId", dbUser.getId());
         String token = JwtUtil.generateToken(username, claims);
 
-        // 删除验证码
-        captchaUtil.removeCaptcha(username);
-
+        captchaUtil.removeLoginCaptcha(username);
         return Result.ok("登录成功", token);
     }
 
     @Override
-    public Result getCaptcha(String username) {
+    public Result getLoginCaptcha(String username) {
         if (username == null || username.isEmpty()) {
             return Result.error(400, "用户名不能为空");
         }
-
-        // 生成验证码
-        String captcha = captchaUtil.generateCaptcha(username);
-
+        String captcha = captchaUtil.generateLoginCaptcha(username);
+        log.info("login captcha username={}, code={}", username, captcha);
         Map<String, Object> data = new HashMap<>();
-        data.put("captcha", captcha); // 实际生产环境中应该通过邮件或短信发送验证码
-        return Result.ok("验证码生成成功", data);
+        data.put("captcha", captcha);
+        return Result.ok("登录验证码生成成功", data);
     }
 
     @Override
-    public Result register(User user) {
+    public Result getRegisterCaptcha(String username) {
+        if (username == null || username.isEmpty()) {
+            return Result.error(400, "用户名不能为空");
+        }
+        String captcha = captchaUtil.generateRegisterCaptcha(username);
+        log.info("register captcha username={}, code={}", username, captcha);
+        Map<String, Object> data = new HashMap<>();
+        data.put("captcha", captcha);
+        return Result.ok("注册验证码生成成功", data);
+    }
+
+    @Override
+    public Result register(loginData user) {
         String username = user.getUsername();
         String password = user.getPassword();
+        String captcha = user.getCaptcha();
 
-        // 参数校验
         if (username == null || username.isEmpty()) {
             return Result.error(400, "用户名不能为空");
         }
         if (password == null || password.isEmpty()) {
             return Result.error(400, "密码不能为空");
         }
+        if (captcha == null || captcha.isEmpty()) {
+            return Result.error(400, "验证码不能为空");
+        }
 
-        // 检查用户名是否已存在
+        if (!captchaUtil.validateRegisterCaptcha(username, captcha)) {
+            return Result.error(400, "验证码错误或已过期");
+        }
+
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("username", username);
         User existUser = userMapper.selectOne(queryWrapper);
@@ -103,25 +123,36 @@ public class loginServiceImpl implements loginService {
             return Result.error(400, "用户名已存在");
         }
 
-        // 保存用户信息
-        // 加密密码
-        MessageDigest md;
+        String encryptedPassword;
         try {
-            md = MessageDigest.getInstance("MD5");
+            encryptedPassword = md5Hex(password);
         } catch (NoSuchAlgorithmException e) {
-            return Result.error(500, "MD5算法不存在");
+            return Result.error(500, "MD5算法不可用");
         }
-        byte[] encryptedPassword = md.digest(password.getBytes());
-        user.setPassword(new String(encryptedPassword));
-        user.setStatus(1);
-        user.setCreateTime(java.time.LocalDateTime.now());
-        user.setUpdateTime(java.time.LocalDateTime.now());
 
-        int result = userMapper.insert(user);
+        User newUser = User.builder()
+                .username(username)
+                .password(encryptedPassword)
+                .status(1)
+                .createTime(LocalDateTime.now())
+                .updateTime(LocalDateTime.now())
+                .build();
+
+        int result = userMapper.insert(newUser);
         if (result > 0) {
+            captchaUtil.removeRegisterCaptcha(username);
             return Result.ok("注册成功");
-        } else {
-            return Result.error(500, "注册失败");
         }
+        return Result.error(500, "注册失败");
+    }
+
+    private String md5Hex(String input) throws NoSuchAlgorithmException {
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+        StringBuilder sb = new StringBuilder(digest.length * 2);
+        for (byte b : digest) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }
