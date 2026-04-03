@@ -35,19 +35,48 @@
             {{ avatarLabel(msg.role) }}
           </div>
           <div class="bubble">
-            {{ msg.content }}
+            <template v-if="!msg.orderConfirmation">
+              {{ msg.content }}
+            </template>
             <div v-if="msg.orderConfirmation" class="order-confirm-card">
               <div class="order-confirm-line">
                 <span>店铺</span>
                 <strong>{{ msg.orderConfirmation.shopName || '-' }}</strong>
               </div>
+              <div
+                v-if="(msg.orderConfirmation.addressOptions || []).length > 1"
+                class="order-confirm-picker"
+              >
+                <span>配送地址</span>
+                <select
+                  v-model.number="msg.orderConfirmation.selectedAddressBookId"
+                  :disabled="sending"
+                  @change="syncOrderAddress(msg.orderConfirmation)"
+                >
+                  <option
+                    v-for="option in msg.orderConfirmation.addressOptions"
+                    :key="`addr-${option.id}`"
+                    :value="option.id"
+                  >
+                    {{ formatAddressOption(option) }}
+                  </option>
+                </select>
+              </div>
               <div class="order-confirm-line">
                 <span>地址</span>
-                <strong>{{ msg.orderConfirmation.address || '-' }}</strong>
+                <strong>{{ currentOrderAddress(msg.orderConfirmation) }}</strong>
               </div>
               <div class="order-confirm-line">
                 <span>收货人</span>
-                <strong>{{ formatContact(msg.orderConfirmation) }}</strong>
+                <strong>{{ currentOrderContact(msg.orderConfirmation) }}</strong>
+              </div>
+              <div class="order-confirm-line">
+                <span>实收金额</span>
+                <strong>￥{{ formatMoney(msg.orderConfirmation.amount) }}</strong>
+              </div>
+              <div class="order-confirm-line">
+                <span>预计送达</span>
+                <strong>{{ msg.orderConfirmation.estimatedDeliveryTime || '-' }}</strong>
               </div>
               <div class="order-confirm-items">
                 <span>菜品</span>
@@ -59,18 +88,28 @@
                   {{ item.display_text || `${item.name} x${item.quantity || 1}` }}
                 </div>
               </div>
+              <div class="order-confirm-picker">
+                <span>备注</span>
+                <textarea
+                  v-model.trim="msg.orderConfirmation.remark"
+                  :disabled="sending"
+                  rows="2"
+                  placeholder="口味、忌口、配送备注都可以写在这里"
+                  @change="saveHistory"
+                ></textarea>
+              </div>
               <div class="order-confirm-actions">
                 <button
                   class="primary-btn"
                   :disabled="sending"
-                  @click="sendOrderDecision(msg.orderConfirmation.confirmText || '确认下单')"
+                  @click="sendOrderDecision(msg, msg.orderConfirmation.confirmText || '确认下单')"
                 >
                   确认下单
                 </button>
                 <button
                   class="ghost-btn"
                   :disabled="sending"
-                  @click="sendOrderDecision(msg.orderConfirmation.cancelText || '取消下单')"
+                  @click="sendOrderDecision(msg, msg.orderConfirmation.cancelText || '取消下单')"
                 >
                   取消下单
                 </button>
@@ -109,10 +148,10 @@
             :disabled="sending"
             @focus="openQuickActions"
             @blur="scheduleQuickActionsClose"
-            @keyup.enter="send"
+            @keyup.enter="send()"
             placeholder="直接说想找什么"
           />
-          <button class="send-btn" :disabled="sending" @click="send">
+          <button class="send-btn" :disabled="sending" @click="send()">
             {{ sending ? '传输中' : '发送' }}
           </button>
         </div>
@@ -297,10 +336,16 @@ export default {
 
       try {
         const payload = JSON.parse(rawContent.slice(ORDER_CONFIRMATION_PREFIX.length))
+        const addressOptions = Array.isArray(payload.addressOptions) ? payload.addressOptions : []
+        const selectedAddressBookId = payload.addressBookId || addressOptions[0]?.id || 0
         return {
           ...message,
           rawContent,
-          orderConfirmation: payload,
+          orderConfirmation: {
+            ...payload,
+            addressOptions,
+            selectedAddressBookId,
+          },
           content: payload.message || '请确认以下订单信息',
         }
       } catch {
@@ -311,6 +356,40 @@ export default {
       const consignee = orderConfirmation?.consignee || '-'
       const phone = orderConfirmation?.phone || ''
       return `${consignee}${phone ? ` ${phone}` : ''}`
+    },
+    selectedAddressOption(orderConfirmation) {
+      const options = Array.isArray(orderConfirmation?.addressOptions) ? orderConfirmation.addressOptions : []
+      const selectedId = Number(orderConfirmation?.selectedAddressBookId || 0)
+      if (!options.length || !selectedId) return null
+      return options.find(option => Number(option.id) === selectedId) || null
+    },
+    currentOrderAddress(orderConfirmation) {
+      return this.selectedAddressOption(orderConfirmation)?.address || orderConfirmation?.address || '-'
+    },
+    currentOrderContact(orderConfirmation) {
+      const selected = this.selectedAddressOption(orderConfirmation)
+      if (!selected) return this.formatContact(orderConfirmation)
+      return `${selected.consignee || '-'}${selected.phone ? ` ${selected.phone}` : ''}`
+    },
+    formatAddressOption(option) {
+      const name = option?.consignee || '-'
+      const phone = option?.phone || ''
+      const address = option?.address || '-'
+      const label = option?.label ? ` ${option.label}` : ''
+      const defaultText = option?.isDefault ? '（默认）' : ''
+      return `${name} ${phone} ${address}${label}${defaultText}`.trim()
+    },
+    formatMoney(value) {
+      const amount = Number(value || 0)
+      return amount.toFixed(2)
+    },
+    syncOrderAddress(orderConfirmation) {
+      const selected = this.selectedAddressOption(orderConfirmation)
+      if (!selected) return
+      orderConfirmation.address = selected.address || orderConfirmation.address
+      orderConfirmation.consignee = selected.consignee || orderConfirmation.consignee
+      orderConfirmation.phone = selected.phone || orderConfirmation.phone
+      this.saveHistory()
     },
     async loadProfile() {
       const { data } = await axios.post(`${API}/user/detail`, {}, { headers: this.authHeader() })
@@ -393,19 +472,47 @@ export default {
       this.input = text
       this.send()
     },
-    sendOrderDecision(text) {
-      if (this.sending) return
-      this.input = text
-      this.send()
+    buildOrderDecisionPayload(orderConfirmation, text) {
+      if (String(text || '').includes('确认下单')) {
+        const selectedAddressBookId = Number(orderConfirmation?.selectedAddressBookId || orderConfirmation?.addressBookId || 0)
+        const remark = encodeURIComponent(String(orderConfirmation?.remark || '').trim())
+        return {
+          displayText: '确认下单',
+          requestText: `确认下单 address_book_id=${selectedAddressBookId} remark=${remark}`,
+        }
+      }
+      return {
+        displayText: text,
+        requestText: text,
+      }
     },
-    async send() {
-      const question = this.input.trim()
-      if (!question || this.sending) return
+    hideOrderCard(message) {
+      if (!message?.orderConfirmation) return
+      message.orderConfirmation = null
+      this.saveHistory()
+    },
+    sendOrderDecision(message, text) {
+      if (this.sending) return
+      const payload = this.buildOrderDecisionPayload(message?.orderConfirmation, text)
+      this.hideOrderCard(message)
+      this.send(payload)
+    },
+    async send(payload = null) {
+      const normalizedPayload = payload instanceof Event ? null : payload
+      const baseInput = this.input.trim()
+      const displayText = typeof normalizedPayload === 'object' && normalizedPayload
+        ? String(normalizedPayload.displayText || '').trim()
+        : (typeof normalizedPayload === 'string' ? normalizedPayload.trim() : baseInput)
+      const requestText = typeof normalizedPayload === 'object' && normalizedPayload
+        ? String(normalizedPayload.requestText || '').trim()
+        : (typeof normalizedPayload === 'string' ? normalizedPayload.trim() : baseInput)
+
+      if (!requestText || this.sending) return
       this.quickActionsOpen = false
       this.input = ''
       this.sending = true
 
-      this.pushMsg('user', question)
+      this.pushMsg('user', displayText)
       const ai = { id: this.msgIdSeed++, role: 'agent', content: '' }
       this.messages.push(ai)
       this.streamingMessageId = ai.id
@@ -413,10 +520,10 @@ export default {
       this.scrollBottom()
 
       try {
-        const streamed = await this.tryStream(question, ai)
+        const streamed = await this.tryStream(requestText, ai)
         if (!streamed) {
           const { data } = await axios.get(`${API}/user/talk`, {
-            params: { question },
+            params: { question: requestText },
             headers: this.authHeader(),
           })
           ai.content = data?.data || data?.result || '无返回内容'
@@ -996,6 +1103,40 @@ export default {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.72);
   color: #173653;
+}
+
+.order-confirm-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.order-confirm-picker span {
+  color: rgba(23, 54, 83, 0.68);
+  font-size: 13px;
+}
+
+.order-confirm-picker select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #173653;
+  outline: none;
+}
+
+.order-confirm-picker textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #173653;
+  outline: none;
+  font: inherit;
 }
 
 .order-confirm-actions {

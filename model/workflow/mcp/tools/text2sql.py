@@ -81,6 +81,27 @@ class Text2SQL:
         sql += " LIMIT 1"
         return self.execute_one("sky_take_out", sql, params=params)
 
+    def get_sky_take_out_default_address(self, user_id: int) -> Optional[Dict[str, Any]]:
+        sql = (
+            "SELECT id, user_id, consignee, phone, province_name, city_name, district_name, detail, label, is_default "
+            "FROM address_book WHERE user_id = %s ORDER BY is_default DESC, id ASC LIMIT 1"
+        )
+        return self.execute_one("sky_take_out", sql, params=[int(user_id)])
+
+    def list_sky_take_out_addresses(self, user_id: int) -> List[Dict[str, Any]]:
+        sql = (
+            "SELECT id, user_id, consignee, phone, province_name, city_name, district_name, detail, label, is_default "
+            "FROM address_book WHERE user_id = %s ORDER BY is_default DESC, id ASC"
+        )
+        return self.execute_query("sky_take_out", sql, params=[int(user_id)])
+
+    def list_sky_take_out_dishes(self, limit: int = 200) -> List[Dict[str, Any]]:
+        sql = (
+            "SELECT id, name, category_id, price, status, description "
+            "FROM dish WHERE status = 1 ORDER BY id ASC LIMIT %s"
+        )
+        return self.execute_query("sky_take_out", sql, params=[int(limit)])
+
     def get_sky_take_out_dishes_by_ids(self, dish_ids: Iterable[Any]) -> Dict[int, Dict[str, Any]]:
         normalized_ids = [int(dish_id) for dish_id in dish_ids if dish_id is not None]
         if not normalized_ids:
@@ -93,6 +114,26 @@ class Text2SQL:
         )
         rows = self.execute_query("sky_take_out", sql, normalized_ids)
         return {int(row["id"]): row for row in rows if row.get("id") is not None}
+
+    def get_sky_take_out_dish_flavors_by_dish_ids(self, dish_ids: Iterable[Any]) -> Dict[int, List[Dict[str, Any]]]:
+        normalized_ids = [int(dish_id) for dish_id in dish_ids if dish_id is not None]
+        if not normalized_ids:
+            return {}
+
+        placeholders = ",".join(["%s"] * len(normalized_ids))
+        sql = (
+            f"SELECT id, dish_id, name, value "
+            f"FROM dish_flavor WHERE dish_id IN ({placeholders})"
+        )
+        rows = self.execute_query("sky_take_out", sql, normalized_ids)
+
+        result: Dict[int, List[Dict[str, Any]]] = {}
+        for row in rows:
+            dish_id = row.get("dish_id")
+            if dish_id is None:
+                continue
+            result.setdefault(int(dish_id), []).append(row)
+        return result
 
     def get_sky_take_out_setmeals_by_ids(self, setmeal_ids: Iterable[Any]) -> Dict[int, Dict[str, Any]]:
         normalized_ids = [int(setmeal_id) for setmeal_id in setmeal_ids if setmeal_id is not None]

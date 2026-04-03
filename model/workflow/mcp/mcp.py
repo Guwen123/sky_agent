@@ -5,6 +5,7 @@ from model.workflow.mcp.tools.service_tools import (
     getHotBlogs,
     getMyBlogHistory,
     getOrderHistory,
+    prepareTakeoutOrderFromText,
     placeTakeoutOrder,
 )
 
@@ -14,6 +15,7 @@ MCP_TOOLS = [
     getHotBlogs,
     getMyBlogHistory,
     getOrderHistory,
+    prepareTakeoutOrderFromText,
     placeTakeoutOrder,
     confirmPendingTakeoutOrder,
     cancelPendingTakeoutOrder,
