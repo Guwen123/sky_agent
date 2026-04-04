@@ -1,5 +1,4 @@
 # Agent - 智能生活服务助手
-演示Bilibili：[BV1oA93BtEzt](https://www.bilibili.com/video/BV1oA93BtEzt/?spm_id_from=333.337.search-card.all.click)
 
 ## 项目简介
 
